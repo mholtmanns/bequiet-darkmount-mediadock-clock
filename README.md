@@ -1,3 +1,11 @@
+# Alternating Idle Images for be Quiet Dark Mount Media Dock
+
+### The Plan
+Replace the `generate.js` script with different templates to display arbitrary image content. Start things off with a simple analog clock updating every minute.
+
+Original README content from https://github.com/MikeAndrews90/bequiet-darkmount-mediadock-stats below this line.
+--
+
 # keyboard-stats
 
 Displays live system stats on the be quiet! Dark Mount keyboard's media dock LCD, updated every 20 seconds.
