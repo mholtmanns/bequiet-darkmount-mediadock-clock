@@ -1,7 +1,24 @@
-# Alternating Idle Images for be Quiet Dark Mount Media Dock
+# Idle Images for be Quiet! Media Dock
 
-### The Plan
-Replace the `generate.js` script with different templates to display arbitrary image content. Start things off with a simple analog clock updating every minute.
+## The Plan
+Replace the `generate.js` script with different templates to display user designed image content. Start things off with a simple analog clock updating every minute.
+
+### Config file
+I added a config file since I imagine people would like to configure things to their liking without hard-coding it in the scripts. Current parameters are:
+
+- `intervalMs`: Update interval for the idle image. Defaults to 60s in `automate.js`
+
+## Analog Clock
+`generate_clock.js` - simple DB style analog watchface.
+
+![preview](preview_clock.png)
+
+Recommended config parameters:
+- `intervalMs`: 30000
+  - *# depending on the start time the update delay will feel lagging with higher values*
+
+*(The End)*
+-- 
 
 Original README content from https://github.com/MikeAndrews90/bequiet-darkmount-mediadock-stats below this line.
 --
@@ -10,7 +27,7 @@ Original README content from https://github.com/MikeAndrews90/bequiet-darkmount-
 
 Displays live system stats on the be quiet! Dark Mount keyboard's media dock LCD, updated every 20 seconds.
 
-![preview](preview.png)
+![preview](preview_stats.png)
 
 Shows: clock, CPU %, RAM % + usage, GPU %, VRAM %, GPU temperature.
 
