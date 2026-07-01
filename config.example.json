@@ -2,10 +2,12 @@
   "generator": "clock",
   "intervalMs": 30000,
   "complications": {
-    "cornerTopLeft": true,
-    "cornerTopRight": true,
-    "cornerBottomLeft": true,
-    "cornerBottomRight": true,
+    "slots": {
+      "1": "cpu",
+      "2": "ram",
+      "3": "gpu",
+      "4": "cpuTemp"
+    },
     "dayOfWeek": true,
     "date": true
   },
@@ -19,7 +21,8 @@
       "bold": "700"
     },
     "sizes": {
-      "complicationCorner": 48,
+      "complicationCorner": 40,
+      "complicationCornerLabel": 20,
       "complicationDate": 28
     }
   }

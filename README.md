@@ -12,10 +12,12 @@ Copy `config.example.json` to `config.json` and edit as needed:
   "generator": "clock",
   "intervalMs": 30000,
   "complications": {
-    "cornerTopLeft": true,
-    "cornerTopRight": true,
-    "cornerBottomLeft": true,
-    "cornerBottomRight": true,
+    "slots": {
+      "1": "cpu",
+      "2": "ram",
+      "3": "gpu",
+      "4": "cpuTemp"
+    },
     "dayOfWeek": true,
     "date": true
   }
@@ -26,7 +28,9 @@ Copy `config.example.json` to `config.json` and edit as needed:
 |-----------|--------|-------------|
 | `generator` | `"clock"` \| `"stats"` | Which image template to render |
 | `intervalMs` | milliseconds | Upload interval in `automate.js` (default 60s) |
-| `complications.*` | boolean | Clock-only overlay slots (see below) |
+| `complications.slots` | stat key or `null` | Corner slots 1–4 (see below) |
+| `complications.dayOfWeek` | boolean | Short weekday above clock centre |
+| `complications.date` | boolean | Abbreviated date below clock centre |
 
 `generate.js` reads `config.json` and dispatches to the selected generator. `automate.js` uses the same config for `intervalMs`.
 
@@ -40,13 +44,36 @@ Copy `config.example.json` to `config.json` and edit as needed:
 
 ### Complications
 
-Static overlay slots on the clock face (configured via `complications` in `config.json`):
+Overlay slots on the clock face (configured via `complications` in `config.json`):
 
-- **Four corners** (155×100 px each): placeholder digits 1–4 when enabled
+**Corner slots 1–4** (155×100 px each) — assign any stat key or `null` to disable:
+
+| Slot | Position |
+|------|----------|
+| `1` | Top-left |
+| `2` | Top-right |
+| `3` | Bottom-left |
+| `4` | Bottom-right |
+
+| Stat key | Label | Value example |
+|----------|-------|----------------|
+| `cpu` | CPU | `42%` |
+| `cpuTemp` | CPU | `62°` |
+| `ram` | RAM | `67%` |
+| `gpu` | GPU | `23%` |
+| `vram` | VRAM | `45%` |
+| `gpuTemp` | GPU | `58°` |
+
+Temperatures use the same source name as load (e.g. `GPU` for both `gpu` and `gpuTemp`); `%` vs `°` distinguishes them.
+
+**Date slots** (boolean toggles):
+
 - **Above centre** (half the face radius): short day of week, e.g. `Thu`
 - **Below centre** (half the face radius): abbreviated date, e.g. `Jun 28`
 
-Recommended `intervalMs`: **30000** — depending on the start time, higher values can make minute updates feel laggy.
+Corner stats are collected live on each refresh (same sources as the stats template). Recommended `intervalMs`: **20000** when using live stats. CPU temperature uses Windows WMI via `systeminformation` and may be unavailable or approximate on some hardware; GPU temperature via `nvidia-smi` is more reliable.
+
+For clock-only (no stats), set all slots to `null`. For minute-only updates without stats polling, use `intervalMs`: **30000**.
 
 ## System Stats (legacy)
 

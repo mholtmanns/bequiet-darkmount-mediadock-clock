@@ -13,6 +13,7 @@ const {
 } = require('./lib/layout');
 const { rotatedRect, radialPoint } = require('./lib/geometry');
 const { buildComplicationsSvg } = require('./lib/complications');
+const { getStats, needsStats } = require('./lib/stats');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -27,8 +28,9 @@ const CURRENT_IMAGE = path.join(__dirname, 'current.png');
  *
  * @param {Date} now
  * @param {object} [config] — optional; `config.complications` toggles overlay slots
+ * @param {object} [stats] — system stats for corner slot values
  */
-function buildClockSvg(now, config = {}) {
+function buildClockSvg(now, config = {}, stats = null) {
   const h12 = now.getHours() % 12;
   const min = now.getMinutes();
 
@@ -74,7 +76,7 @@ function buildClockSvg(now, config = {}) {
 
   // ── Complications (corners + date) ─────────────────────────────────────────
   // Rendered after the face background, before tick marks and hands.
-  const complicationsSvg = buildComplicationsSvg(now, config);
+  const complicationsSvg = buildComplicationsSvg(now, config, stats);
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
 
@@ -113,14 +115,22 @@ async function generateImage(config) {
   const sharp = require('sharp');  // lazy: only loaded when actually generating
   const resolved = config ?? loadConfig();
   const now = new Date();
-  const svg = buildClockSvg(now, resolved);
+  const stats = needsStats(resolved) ? await getStats() : null;
+  const svg = buildClockSvg(now, resolved, stats);
 
   await sharp(Buffer.from(svg))
     .resize(W, H)
     .png()
     .toFile(CURRENT_IMAGE);
 
-  console.log(`[${now.toLocaleTimeString()}] Clock → ${CURRENT_IMAGE}`);
+  if (stats) {
+    const gpuInfo = stats.gpuLoadPct != null
+      ? `, GPU ${Math.round(stats.gpuLoadPct)}% @ ${stats.gpuTemp}°C`
+      : '';
+    console.log(`[${now.toLocaleTimeString()}] CPU ${stats.cpuPct}%  RAM ${stats.ramPct}%${gpuInfo} → ${CURRENT_IMAGE}`);
+  } else {
+    console.log(`[${now.toLocaleTimeString()}] Clock → ${CURRENT_IMAGE}`);
+  }
   return CURRENT_IMAGE;
 }
 

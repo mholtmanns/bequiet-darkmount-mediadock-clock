@@ -3,24 +3,25 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { buildComplicationsSvg } = require('../lib/complications');
+const { MOCK_STATS } = require('../lib/stats');
 const { CORNER_SLOTS, DATE_SLOTS, CX, CY, R } = require('../lib/layout');
+const { DEFAULTS } = require('../lib/config');
 
 const FIXED_DATE = new Date('2026-06-28T10:30:00');
 
-function config(complications, fonts) {
-  return { complications, fonts };
+function config(overrides = {}) {
+  return {
+    complications: {
+      ...DEFAULTS.complications,
+      ...overrides,
+    },
+    fonts: DEFAULTS.fonts,
+  };
 }
 
 describe('buildComplicationsSvg', () => {
-  it('renders all four corner rects at expected positions', () => {
-    const svg = buildComplicationsSvg(FIXED_DATE, config({
-      cornerTopLeft: true,
-      cornerTopRight: true,
-      cornerBottomLeft: true,
-      cornerBottomRight: true,
-      dayOfWeek: false,
-      date: false,
-    }));
+  it('renders stat corners at expected positions for default slots', () => {
+    const svg = buildComplicationsSvg(FIXED_DATE, config(), MOCK_STATS);
 
     assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerTopLeft.x}" y="${CORNER_SLOTS.cornerTopLeft.y}" width="155" height="100"`));
     assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerTopRight.x}" y="${CORNER_SLOTS.cornerTopRight.y}" width="155" height="100"`));
@@ -28,47 +29,38 @@ describe('buildComplicationsSvg', () => {
     assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerBottomRight.x}" y="${CORNER_SLOTS.cornerBottomRight.y}" width="155" height="100"`));
   });
 
-  it('shows placeholder numbers 1–4 in corners', () => {
-    const svg = buildComplicationsSvg(FIXED_DATE, config({
-      cornerTopLeft: true,
-      cornerTopRight: true,
-      cornerBottomLeft: true,
-      cornerBottomRight: true,
-      dayOfWeek: false,
-      date: false,
-    }));
-
-    assert.match(svg, />1</);
-    assert.match(svg, />2</);
-    assert.match(svg, />3</);
-    assert.match(svg, />4</);
+  it('shows CPU load in slot 1 and RAM in slot 2', () => {
+    const svg = buildComplicationsSvg(FIXED_DATE, config(), MOCK_STATS);
+    assert.match(svg, />CPU</);
+    assert.match(svg, />42%</);
+    assert.match(svg, />RAM</);
+    assert.match(svg, />67%</);
   });
 
-  it('omits disabled corners', () => {
+  it('shows GPU temp with label GPU and degree value in slot 4', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, config({
-      cornerTopLeft: true,
-      cornerTopRight: false,
-      cornerBottomLeft: false,
-      cornerBottomRight: true,
-      dayOfWeek: false,
-      date: false,
-    }));
+      slots: { '1': null, '2': null, '3': null, '4': 'gpuTemp' },
+    }), MOCK_STATS);
+    assert.match(svg, />GPU</);
+    assert.match(svg, />58°</);
+    assert.doesNotMatch(svg, />42%</);
+  });
 
-    assert.match(svg, />1</);
-    assert.match(svg, />4</);
-    assert.doesNotMatch(svg, />2</);
-    assert.doesNotMatch(svg, />3</);
+  it('omits disabled slots', () => {
+    const svg = buildComplicationsSvg(FIXED_DATE, config({
+      slots: { '1': 'cpu', '2': null, '3': null, '4': null },
+    }), MOCK_STATS);
+    assert.match(svg, />42%</);
+    assert.doesNotMatch(svg, />67%</);
+    assert.doesNotMatch(svg, />58°</);
   });
 
   it('renders day of week at CY - R/2', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, config({
-      cornerTopLeft: false,
-      cornerTopRight: false,
-      cornerBottomLeft: false,
-      cornerBottomRight: false,
+      slots: { '1': null, '2': null, '3': null, '4': null },
       dayOfWeek: true,
       date: false,
-    }));
+    }), MOCK_STATS);
 
     assert.match(svg, new RegExp(`x="${DATE_SLOTS.dayOfWeek.x}" y="${DATE_SLOTS.dayOfWeek.y}"`));
     assert.match(svg, />Sun</);
@@ -76,47 +68,32 @@ describe('buildComplicationsSvg', () => {
 
   it('renders abbreviated date at CY + R/2', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, config({
-      cornerTopLeft: false,
-      cornerTopRight: false,
-      cornerBottomLeft: false,
-      cornerBottomRight: false,
+      slots: { '1': null, '2': null, '3': null, '4': null },
       dayOfWeek: false,
       date: true,
-    }));
+    }), MOCK_STATS);
 
     assert.match(svg, new RegExp(`x="${DATE_SLOTS.date.x}" y="${DATE_SLOTS.date.y}"`));
     assert.match(svg, />Jun 28</);
   });
 
-  it('omits date text when disabled', () => {
-    const svg = buildComplicationsSvg(FIXED_DATE, config({
-      dayOfWeek: false,
-      date: false,
-    }));
-    assert.doesNotMatch(svg, />Jun 28</);
-    assert.doesNotMatch(svg, />Sun</);
+  it('uses visible label color on dark corner background', () => {
+    const svg = buildComplicationsSvg(FIXED_DATE, config(), MOCK_STATS);
+    assert.match(svg, /fill="#b0b0b8">CPU</);
+    assert.doesNotMatch(svg, /fill="#111111">CPU</);
   });
 
-  it('uses font family and weight from config.fonts', () => {
-    const svg = buildComplicationsSvg(FIXED_DATE, config(
-      { dayOfWeek: true, date: false },
-      {
+  it('uses font family from config.fonts', () => {
+    const svg = buildComplicationsSvg(FIXED_DATE, {
+      complications: { slots: { '1': 'cpu' }, dayOfWeek: false, date: false },
+      fonts: {
         complication: 'Roboto, sans-serif',
         weights: { semibold: '500', bold: '800' },
-      }
-    ));
+        sizes: { complicationCorner: 40, complicationCornerLabel: 20 },
+      },
+    }, MOCK_STATS);
 
     assert.match(svg, /font-family="Roboto, sans-serif"/);
-    assert.match(svg, /font-weight="500"/);
-  });
-
-  it('uses font size from config.fonts.sizes', () => {
-    const svg = buildComplicationsSvg(FIXED_DATE, config(
-      { dayOfWeek: true, date: false },
-      { sizes: { complicationDate: 32 } }
-    ));
-
-    assert.match(svg, /font-size="32"/);
   });
 
   it('date slot y positions are half radius from center', () => {

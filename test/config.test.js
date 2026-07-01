@@ -23,14 +23,29 @@ describe('loadConfig', () => {
     fs.writeFileSync(configPath, JSON.stringify({
       generator: 'stats',
       intervalMs: 20_000,
-      complications: { cornerTopLeft: false },
+      complications: { slots: { '1': 'gpu', '2': null } },
     }));
 
     const config = loadConfig(configPath);
     assert.equal(config.generator, 'stats');
     assert.equal(config.intervalMs, 20_000);
-    assert.equal(config.complications.cornerTopLeft, false);
-    assert.equal(config.complications.cornerTopRight, true);
+    assert.equal(config.complications.slots['1'], 'gpu');
+    assert.equal(config.complications.slots['2'], null);
+    assert.equal(config.complications.slots['3'], DEFAULTS.complications.slots['3']);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it('deep-merges complications.slots', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-test-'));
+    const configPath = path.join(tmpDir, 'config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      complications: { slots: { '4': 'vram' } },
+    }));
+
+    const config = loadConfig(configPath);
+    assert.equal(config.complications.slots['4'], 'vram');
+    assert.equal(config.complications.slots['1'], DEFAULTS.complications.slots['1']);
 
     fs.rmSync(tmpDir, { recursive: true });
   });

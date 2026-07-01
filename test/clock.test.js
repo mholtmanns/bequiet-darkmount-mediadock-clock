@@ -4,6 +4,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { buildClockSvg } = require('../generate_clock');
 const { DEFAULTS } = require('../lib/config');
+const { MOCK_STATS } = require('../lib/stats');
 
 const TIME_10_10 = new Date('2026-01-15T10:10:00');
 
@@ -20,31 +21,28 @@ describe('buildClockSvg', () => {
     assert.match(svg, /Centre hub/);
   });
 
-  it('includes complications when config enables them', () => {
-    const svg = buildClockSvg(TIME_10_10, { complications: DEFAULTS.complications });
-    assert.match(svg, />1</);
+  it('includes stat complications when config and stats provided', () => {
+    const svg = buildClockSvg(TIME_10_10, { complications: DEFAULTS.complications }, MOCK_STATS);
+    assert.match(svg, />CPU</);
+    assert.match(svg, />42%</);
     assert.match(svg, />Jan 15</);
     assert.match(svg, />Thu</);
   });
 
-  it('excludes complications when all disabled', () => {
+  it('excludes complications when all slots and dates disabled', () => {
     const svg = buildClockSvg(TIME_10_10, {
       complications: {
-        cornerTopLeft: false,
-        cornerTopRight: false,
-        cornerBottomLeft: false,
-        cornerBottomRight: false,
+        slots: { '1': null, '2': null, '3': null, '4': null },
         dayOfWeek: false,
         date: false,
       },
-    });
+    }, MOCK_STATS);
     assert.doesNotMatch(svg, /width="155" height="100"/);
-    assert.doesNotMatch(svg, />Thursday</);
+    assert.doesNotMatch(svg, />Thu</);
   });
 
   it('renders symmetric hands at 10:10', () => {
-    const svg = buildClockSvg(TIME_10_10, { complications: {} });
-    // Both hands present
+    const svg = buildClockSvg(TIME_10_10, { complications: { slots: {} } });
     const polygonCount = (svg.match(/<polygon/g) || []).length;
     assert.ok(polygonCount >= 62, `expected tick marks + hands, got ${polygonCount} polygons`);
   });

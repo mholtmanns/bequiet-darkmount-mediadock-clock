@@ -16,16 +16,7 @@ const path = require('path');
 const { loadConfig } = require('./lib/config');
 const { buildClockSvg } = require('./generate_clock');
 const { buildSvg } = require('./generate_stats');
-
-const MOCK_STATS = {
-  cpuPct: 42,
-  ramPct: 67,
-  ramUsedGB: '10.7',
-  ramTotGB: '16.0',
-  gpuLoadPct: 23,
-  gpuMemPct: 45,
-  gpuTemp: 58,
-};
+const { MOCK_STATS } = require('./lib/stats');
 
 function parseArgs(argv) {
   const opts = {
@@ -87,7 +78,7 @@ async function svgToPng(svg, outPath, width, height) {
 }
 
 async function previewClock(config, now, outPath) {
-  const svg = buildClockSvg(now, config);
+  const svg = buildClockSvg(now, config, MOCK_STATS);
   await svgToPng(svg, outPath, 640, 512);
 }
 

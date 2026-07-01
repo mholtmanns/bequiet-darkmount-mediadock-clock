@@ -2,13 +2,11 @@
 'use strict';
 
 const sharp = require('sharp');
-const si = require('systeminformation');
-const { execSync } = require('child_process');
 const path = require('path');
+const { getStats, tempColor } = require('./lib/stats');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-// PNG written here; IO Center reads it, creates its own UUID copy, pushes to keyboard
 const CURRENT_IMAGE = path.join(__dirname, 'current.png');
 
 const W = 512;
@@ -23,57 +21,6 @@ const WHITE   = '#dcdcdc';
 const DIM     = '#555560';
 const DIVIDER = '#1e1e26';
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
-
-function getNvidiaStat(queryKey) {
-  try {
-    const out = execSync(
-      `nvidia-smi --query-gpu=${queryKey} --format=csv,noheader,nounits`,
-      { stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }
-    ).toString().trim();
-    const val = parseFloat(out);
-    return isNaN(val) ? null : val;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Uses Windows DXGI/WDDM GPU Engine counters — matches Task Manager exactly.
-function getWindowsGpuPct() {
-  try {
-    const ps = `$s=(Get-Counter '\\GPU Engine(*)\\Utilization Percentage' -ErrorAction Stop).CounterSamples;[Math]::Round([Math]::Min(100,($s|Measure-Object -Property CookedValue -Sum).Sum))`;
-    const out = execSync(`powershell -NoProfile -NonInteractive -Command "${ps}"`, {
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 6000,
-    }).toString().trim();
-    const val = parseFloat(out);
-    return isNaN(val) ? null : val;
-  } catch (_) {
-    return null;
-  }
-}
-
-async function getStats() {
-  const [load, mem] = await Promise.all([
-    si.currentLoad(),
-    si.mem(),
-  ]);
-
-  const gpuTemp    = getNvidiaStat('temperature.gpu');
-  const gpuLoadPct = getWindowsGpuPct();
-  const gpuMemPct  = getNvidiaStat('utilization.memory');
-
-  return {
-    cpuPct:    Math.round(load.currentLoad),
-    ramPct:    Math.round(mem.used / mem.total * 100),
-    ramUsedGB: (mem.used  / 1073741824).toFixed(1),
-    ramTotGB:  (mem.total / 1073741824).toFixed(0),
-    gpuTemp,
-    gpuLoadPct,
-    gpuMemPct,
-  };
-}
-
 // ── SVG render ────────────────────────────────────────────────────────────────
 
 function bar(x, y, w, h, pct, fill) {
@@ -81,13 +28,6 @@ function bar(x, y, w, h, pct, fill) {
   return `
     <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${DIVIDER}" rx="8"/>
     ${filled > 0 ? `<rect x="${x}" y="${y}" width="${filled}" height="${h}" fill="${fill}" rx="8"/>` : ''}`;
-}
-
-function tempColor(c) {
-  if (c === null) return DIM;
-  if (c >= 85) return '#ff4040';
-  if (c >= 70) return '#ffb030';
-  return '#40c840';
 }
 
 function buildSvg(s, now) {
@@ -170,8 +110,6 @@ async function generateImage(_config) {
 }
 
 module.exports = { generateImage, buildSvg };
-
-// ── Standalone entry-point: node generate.js → writes current.png ────────────
 
 if (require.main === module) {
   generateImage().catch(err => {
