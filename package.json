@@ -9,6 +9,7 @@
     "preview": "node preview.js",
     "preview:clock": "node preview.js clock --out preview_clock.png",
     "preview:stats": "node preview.js stats --out preview_stats.png",
+    "hwinfo:sensors": "node scripts/list-hwinfo-sensors.js",
     "test": "node --test test/**/*.test.js"
   },
   "dependencies": {

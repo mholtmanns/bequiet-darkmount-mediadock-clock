@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const {
   MOCK_STATS,
   parseCpuTemp,
+  resolveCpuTemp,
+  needsCpuTemp,
   formatStatForSlot,
   needsStats,
   isStatTypeKey,
@@ -18,6 +20,40 @@ describe('parseCpuTemp', () => {
   it('returns null when no valid readings', () => {
     assert.equal(parseCpuTemp({ main: null, max: null, cores: [] }), null);
     assert.equal(parseCpuTemp({ main: -1, max: 0 }), null);
+  });
+});
+
+describe('needsCpuTemp', () => {
+  it('is true when a slot uses cpuTemp', () => {
+    assert.equal(needsCpuTemp({ complications: { slots: { '4': 'cpuTemp' } } }), true);
+  });
+
+  it('is false when no cpuTemp slot', () => {
+    assert.equal(needsCpuTemp({ complications: { slots: { '1': 'cpu' } } }), false);
+  });
+});
+
+describe('resolveCpuTemp', () => {
+  it('uses systeminformation when HWiNFO lookup fails', () => {
+    const result = resolveCpuTemp(
+      { main: 55, max: 60 },
+      {
+        complications: { slots: { '4': 'cpuTemp' } },
+        hwinfo: { cpuTempIndex: 999999, cpuTempLabel: '__nonexistent__' },
+      }
+    );
+    assert.equal(result, 60);
+  });
+
+  it('skips HWiNFO when cpuTemp slot disabled and no index configured', () => {
+    const result = resolveCpuTemp(
+      { main: 55, max: 60 },
+      {
+        complications: { slots: { '4': 'cpu' } },
+        hwinfo: { cpuTempLabel: 'CPU Package' },
+      }
+    );
+    assert.equal(result, 60);
   });
 });
 

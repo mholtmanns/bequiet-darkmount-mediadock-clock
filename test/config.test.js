@@ -16,6 +16,7 @@ describe('loadConfig', () => {
     assert.deepEqual(config.complications, DEFAULTS.complications);
     assert.deepEqual(config.fonts, DEFAULTS.fonts);
     assert.deepEqual(config.padding, DEFAULTS.padding);
+    assert.deepEqual(config.hwinfo, DEFAULTS.hwinfo);
   });
 
   it('merges file values over defaults', () => {
@@ -90,6 +91,21 @@ describe('loadConfig', () => {
     const config = loadConfig(configPath);
     assert.equal(config.fonts.sizes.complicationDate, 32);
     assert.equal(config.fonts.sizes.complicationCorner, DEFAULTS.fonts.sizes.complicationCorner);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it('deep-merges hwinfo', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-test-'));
+    const configPath = path.join(tmpDir, 'config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      hwinfo: { cpuTempIndex: 102 },
+    }));
+
+    const config = loadConfig(configPath);
+    assert.equal(config.hwinfo.cpuTempIndex, 102);
+    assert.equal(config.hwinfo.cpuTempLabel, DEFAULTS.hwinfo.cpuTempLabel);
+    assert.equal(config.hwinfo.hive, DEFAULTS.hwinfo.hive);
 
     fs.rmSync(tmpDir, { recursive: true });
   });

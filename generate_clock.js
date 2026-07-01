@@ -96,7 +96,7 @@ function buildClockSvg(now, config = {}, stats = null) {
 async function generateImage(config) {
   const resolved = config ?? loadConfig();
   const now = new Date();
-  const stats = needsStats(resolved) ? await getStats() : null;
+  const stats = needsStats(resolved) ? await getStats(resolved) : null;
   const svg = buildClockSvg(now, resolved, stats);
 
   await writeClockPng(svg, CURRENT_IMAGE);

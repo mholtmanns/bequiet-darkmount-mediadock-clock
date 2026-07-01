@@ -32,6 +32,9 @@ Copy `config.example.json` to `config.json` and edit as needed:
 | `complications.dayOfWeek` | boolean | Short weekday above clock centre |
 | `complications.date` | boolean | Abbreviated date below clock centre |
 | `padding.top/right/bottom/left` | pixels | Inset drawable area on each edge (clock only) |
+| `hwinfo.cpuTempIndex` | number or `null` | HWiNFO Gadget sensor index for CPU temp (Windows) |
+| `hwinfo.cpuTempLabel` | string | Label fallback when index unset (default `CPU Package`) |
+| `hwinfo.hive` | `"auto"` \| `"HKCU"` \| `"HKLM"` | Registry hive for HWiNFO Gadget values |
 
 `generate.js` reads `config.json` and dispatches to the selected generator. `automate.js` uses the same config for `intervalMs`.
 
@@ -110,7 +113,42 @@ Temperatures use the same source name as load (e.g. `GPU` for both `gpu` and `gp
 - **Above centre** (half the face radius): short day of week, e.g. `Thu`
 - **Below centre** (half the face radius): abbreviated date, e.g. `Jun 28`
 
-Corner stats are collected live on each refresh (same sources as the stats template). Recommended `intervalMs`: **20000** when using live stats. CPU temperature uses Windows WMI via `systeminformation` and may be unavailable or approximate on some hardware; GPU temperature via `nvidia-smi` is more reliable.
+Corner stats are collected live on each refresh (same sources as the stats template). Recommended `intervalMs`: **20000** when using live stats. GPU temperature uses `nvidia-smi`; GPU load uses Windows performance counters (matches Task Manager).
+
+### CPU temperature (HWiNFO)
+
+On Windows, CPU temperature for the `cpuTemp` slot is read from **HWiNFO Gadget** registry values when available. This gives accurate die/package temps on hardware where WMI (`systeminformation`) returns nothing.
+
+**Setup:**
+
+1. Run HWiNFO in sensor mode (tray icon → Sensors).
+2. **Configure Sensors** → **HWiNFO Gadget** tab → enable **Enable reporting to Gadget**.
+3. Find your CPU temperature sensor and tick **Report value in Gadget** for it.
+4. List exported sensors and copy the index:
+
+```
+npm run hwinfo:sensors
+```
+
+5. Optional: set `hwinfo.cpuTempIndex` in `config.json`. If omitted, the script matches `hwinfo.cpuTempLabel` (default `"CPU Package"`).
+
+```json
+"hwinfo": {
+  "cpuTempIndex": null,
+  "cpuTempLabel": "CPU Package",
+  "hive": "auto"
+}
+```
+
+| Key | Description |
+|-----|-------------|
+| `cpuTempIndex` | HWiNFO Gadget sensor index (`ValueRawN`). Most reliable once stable. |
+| `cpuTempLabel` | Fallback label match when index is null or invalid. |
+| `hive` | `"auto"` (try HKCU then HKLM), `"HKCU"`, or `"HKLM"`. Use `"HKLM"` if HWiNFO runs elevated. |
+
+HWiNFO and this script should run under the **same Windows user**. If HWiNFO is not running or no sensor is exported, CPU temp falls back to WMI and may show `—`.
+
+**Note:** Gadget sensor indices can change when you add or remove exported sensors — set the index once your gadget list is stable, and keep `cpuTempLabel` as a fallback.
 
 For clock-only (no stats), set all slots to `null`. For minute-only updates without stats polling, use `intervalMs`: **30000**.
 
