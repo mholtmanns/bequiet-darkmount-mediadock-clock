@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { W, H, resolveLayout } = require('../lib/layout');
+const { W, H, resolveLayout, HAND_REF, minuteHandTip } = require('../lib/layout');
 
 describe('resolveLayout', () => {
   it('matches full-canvas layout with zero padding', () => {
@@ -26,5 +26,17 @@ describe('resolveLayout', () => {
     assert.equal(layout.CORNER_SLOTS.cornerTopLeft.y, 10);
     assert.equal(layout.CORNER_SLOTS.cornerTopRight.x, W - 15 - 155);
     assert.equal(layout.CORNER_SLOTS.cornerBottomRight.y, H - 20 - 100);
+  });
+
+  it('minute hand tip overlaps hour ticks and sits near minute ticks', () => {
+    const layout = resolveLayout();
+    const { R, scale } = layout;
+    const tip = minuteHandTip(R, scale);
+    const tickOuter = R - HAND_REF.tickInset * scale;
+    const hourTickInner = tickOuter - HAND_REF.hourTick.len * scale;
+
+    assert.ok(tip > hourTickInner, 'minute hand should overlap 5-minute ticks');
+    assert.ok(tip <= tickOuter, 'minute hand should not pass outer tick edge');
+    assert.equal(tip, tickOuter - HAND_REF.minuteTipGap * scale);
   });
 });

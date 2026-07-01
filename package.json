@@ -7,7 +7,7 @@
     "start": "node generate.js",
     "upload": "node automate.js",
     "preview": "node preview.js",
-    "preview:clock": "node preview.js clock --time 10:10 --out preview_clock.png",
+    "preview:clock": "node preview.js clock --out preview_clock.png",
     "preview:stats": "node preview.js stats --out preview_stats.png",
     "test": "node --test test/**/*.test.js"
   },

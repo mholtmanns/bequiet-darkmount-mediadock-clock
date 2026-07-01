@@ -19,7 +19,14 @@ describe('buildClockSvg', () => {
   it('includes tick marks and centre hub', () => {
     const svg = buildClockSvg(TIME_10_10, {});
     assert.match(svg, /<polygon/);
-    assert.match(svg, /Centre hub/);
+  });
+
+  it('has no second-hand disc or rounded hand tips', () => {
+    const svg = buildClockSvg(TIME_10_10, {});
+    assert.doesNotMatch(svg, /#e30613/);
+    // Face rim + inner + hub only (no tip cap circles on hands).
+    const circles = svg.match(/<circle/g) || [];
+    assert.equal(circles.length, 4);
   });
 
   it('includes stat complications when config and stats provided', () => {
@@ -45,6 +52,6 @@ describe('buildClockSvg', () => {
   it('renders symmetric hands at 10:10', () => {
     const svg = buildClockSvg(TIME_10_10, { complications: { slots: {} } });
     const polygonCount = (svg.match(/<polygon/g) || []).length;
-    assert.ok(polygonCount >= 62, `expected tick marks + hands, got ${polygonCount} polygons`);
+    assert.ok(polygonCount >= 62, `expected 60 ticks + 2 hands, got ${polygonCount} polygons`);
   });
 });

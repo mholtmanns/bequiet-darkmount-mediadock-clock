@@ -126,14 +126,15 @@ Generate preview PNGs without sharp (requires ImageMagick `convert` on PATH):
 
 ```
 npm run preview              # uses generator from config.json
-npm run preview:clock        # clock at 10:10 → preview_clock.png
+npm run preview:clock        # clock at 10:09 → preview_clock.png
 npm run preview:stats        # stats with mock data → preview_stats.png
 ```
 
 Or directly:
 
 ```
-node preview.js clock --time 10:10 --out preview_clock.png
+node preview.js clock --out preview_clock.png
+node preview.js clock --time 10:09 --out preview_clock.png
 node preview.js stats --out preview_stats.png
 ```
 

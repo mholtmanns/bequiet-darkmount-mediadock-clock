@@ -7,7 +7,7 @@
 //   node preview.js [clock|stats] [--time HH:MM] [--out <path>] [--config <path>]
 //
 // Examples:
-//   node preview.js clock --time 10:10 --out preview_clock.png
+//   node preview.js clock --time 10:09 --out preview_clock.png
 //   node preview.js stats --out preview_stats.png
 
 const { execSync } = require('child_process');
@@ -18,6 +18,9 @@ const { buildClockSvg } = require('./generate_clock');
 const { writeClockPng } = require('./lib/clockOutput');
 const { buildSvg } = require('./generate_stats');
 const { MOCK_STATS } = require('./lib/stats');
+
+/** Default time for clock previews when --time is omitted. */
+const DEFAULT_CLOCK_PREVIEW_TIME = '10:09';
 
 function parseArgs(argv) {
   const opts = {
@@ -95,7 +98,8 @@ async function main() {
   const outPath = path.resolve(
     opts.out ?? path.join(__dirname, `preview_${generator}.png`)
   );
-  const now = parseTime(opts.time);
+  const timeStr = opts.time ?? (generator === 'clock' ? DEFAULT_CLOCK_PREVIEW_TIME : null);
+  const now = parseTime(timeStr);
 
   console.log(`Rendering ${generator} (${now.toLocaleString()}) → ${outPath}`);
 
@@ -118,4 +122,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, parseTime, MOCK_STATS, previewClock, previewStats, main };
+module.exports = { parseArgs, parseTime, DEFAULT_CLOCK_PREVIEW_TIME, MOCK_STATS, previewClock, previewStats, main };
