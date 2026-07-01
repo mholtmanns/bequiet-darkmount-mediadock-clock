@@ -3,33 +3,93 @@
 ## The Plan
 Replace the `generate.js` script with different templates to display user designed image content. Start things off with a simple analog clock updating every minute.
 
-### Config file
-I added a config file since I imagine people would like to configure things to their liking without hard-coding it in the scripts. Current parameters are:
+## Configuration
 
-- `intervalMs`: Update interval for the idle image. Defaults to 60s in `automate.js`
+Copy `config.example.json` to `config.json` and edit as needed:
+
+```json
+{
+  "generator": "clock",
+  "intervalMs": 30000,
+  "complications": {
+    "cornerTopLeft": true,
+    "cornerTopRight": true,
+    "cornerBottomLeft": true,
+    "cornerBottomRight": true,
+    "dayOfWeek": true,
+    "date": true
+  }
+}
+```
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `generator` | `"clock"` \| `"stats"` | Which image template to render |
+| `intervalMs` | milliseconds | Upload interval in `automate.js` (default 60s) |
+| `complications.*` | boolean | Clock-only overlay slots (see below) |
+
+`generate.js` reads `config.json` and dispatches to the selected generator. `automate.js` uses the same config for `intervalMs`.
+
+**Note:** the clock template is 640×512 (landscape); the stats template is 512×640 (portrait). Switching `generator` changes the dock orientation.
 
 ## Analog Clock
-`generate_clock.js` - simple DB style analog watchface.
+
+`generate_clock.js` — Deutsche Bahn-style analog watchface with optional complications.
 
 ![preview](preview_clock.png)
 
-Recommended config parameters:
-- `intervalMs`: 30000
-  - *# depending on the start time the update delay will feel lagging with higher values*
+### Complications
 
-*(The End)*
--- 
+Static overlay slots on the clock face (configured via `complications` in `config.json`):
 
-Original README content from https://github.com/MikeAndrews90/bequiet-darkmount-mediadock-stats below this line.
+- **Four corners** (155×100 px each): placeholder digits 1–4 when enabled
+- **Above centre** (half the face radius): short day of week, e.g. `Thu`
+- **Below centre** (half the face radius): abbreviated date, e.g. `Jun 28`
+
+Recommended `intervalMs`: **30000** — depending on the start time, higher values can make minute updates feel laggy.
+
+## System Stats (legacy)
+
+`generate_stats.js` — original stats dashboard from [bequiet-darkmount-mediadock-stats](https://github.com/MikeAndrews90/bequiet-darkmount-mediadock-stats). Set `"generator": "stats"` to use it.
+
+![preview](preview_stats.png)
+
+## Preview images
+
+Generate preview PNGs without sharp (requires ImageMagick `convert` on PATH):
+
+```
+npm run preview              # uses generator from config.json
+npm run preview:clock        # clock at 10:10 → preview_clock.png
+npm run preview:stats        # stats with mock data → preview_stats.png
+```
+
+Or directly:
+
+```
+node preview.js clock --time 10:10 --out preview_clock.png
+node preview.js stats --out preview_stats.png
+```
+
+## Tests
+
+```
+npm test
+```
+
+Runs unit tests (Node built-in `node:test`) for config loading, complication layout, geometry, and clock SVG output. No ImageMagick required for tests.
+
+---
+
+Original README content below this line.
 --
+*(Source: https://github.com/MikeAndrews90/bequiet-darkmount-mediadock-stats)*
 
 # keyboard-stats
 
 Displays live system stats on the be quiet! Dark Mount keyboard's media dock LCD, updated every 20 seconds.
 
-![preview](preview_stats.png)
-
-Shows: clock, CPU %, RAM % + usage, GPU %, VRAM %, GPU temperature.
+![preview](preview_orig.png)
 
 ## How it works
 
@@ -77,14 +137,6 @@ taskkill /f /im node.exe
 ```
 
 To check on it or intervene, click the Chromium icon in the taskbar or open `http://localhost:9222` in any Chrome window for remote DevTools.
-
-## Configuration
-
-Edit the top of `automate.js`:
-
-```js
-const INTERVAL_MS = 20_000; // update interval in milliseconds
-```
 
 ## Disclaimer
 

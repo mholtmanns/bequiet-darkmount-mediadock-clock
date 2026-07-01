@@ -1,3 +1,26 @@
 {
-  "intervalMs": 60000
+  "generator": "clock",
+  "intervalMs": 30000,
+  "complications": {
+    "cornerTopLeft": true,
+    "cornerTopRight": true,
+    "cornerBottomLeft": true,
+    "cornerBottomRight": true,
+    "dayOfWeek": true,
+    "date": true
+  },
+  "fonts": {
+    "sans": "Segoe UI, Helvetica Neue, Arial, sans-serif",
+    "mono": "Consolas, Courier New, monospace",
+    "complication": null,
+    "weights": {
+      "normal": "400",
+      "semibold": "600",
+      "bold": "700"
+    },
+    "sizes": {
+      "complicationCorner": 48,
+      "complicationDate": 28
+    }
+  }
 }

@@ -5,19 +5,17 @@
 
 const { chromium } = require('playwright');
 const { generateImage } = require('./generate');
+const { loadConfig } = require('./lib/config');
 const fs   = require('fs');
 const path = require('path');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const CONFIG_PATH = path.join(__dirname, 'config.json');
-const config = fs.existsSync(CONFIG_PATH)
-  ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
-  : {};
+const config = loadConfig();
 
 const USER_DATA_DIR = `${__dirname}/.chromium-profile`;
 const SITE_URL      = 'https://iocenter.bequiet.com/';
-const INTERVAL_MS   = config.intervalMs ?? 60_000;
+const INTERVAL_MS   = config.intervalMs;
 
 // ─── Browser automation steps ────────────────────────────────────────────────
 

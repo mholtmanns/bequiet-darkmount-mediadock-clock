@@ -154,7 +154,7 @@ function buildSvg(s, now) {
 
 // ── Image generation (exported for use by automate.js loop) ──────────────────
 
-async function generateImage() {
+async function generateImage(_config) {
   const stats = await getStats();
   const now   = new Date();
   const svg   = buildSvg(stats, now);
@@ -169,7 +169,7 @@ async function generateImage() {
   return CURRENT_IMAGE;
 }
 
-module.exports = { generateImage };
+module.exports = { generateImage, buildSvg };
 
 // ── Standalone entry-point: node generate.js → writes current.png ────────────
 

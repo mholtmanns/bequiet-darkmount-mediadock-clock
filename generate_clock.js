@@ -2,80 +2,33 @@
 'use strict';
 
 // generate_clock.js — Deutsche Bahn-style analog clock face
-// 512×640 portrait PNG, updated every minute (no seconds hand).
+// 640×512 landscape PNG, updated every minute (no seconds hand).
 // Lazy-requires sharp so the module can be imported for testing without it.
 
 const path = require('path');
+const { loadConfig } = require('./lib/config');
+const {
+  W, H, CX, CY, R,
+  C_CANVAS, C_RIM, C_FACE, C_TICK, C_HAND, C_DISC,
+} = require('./lib/layout');
+const { rotatedRect, radialPoint } = require('./lib/geometry');
+const { buildComplicationsSvg } = require('./lib/complications');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
+// PNG written here; IO Center reads it, creates its own UUID copy, pushes to keyboard
 const CURRENT_IMAGE = path.join(__dirname, 'current.png');
-
-const W  = 640;
-const H  = 512;
-const CX = W / 2;   // 256
-const CY = H / 2;   // 320
-const R  = 224;     // clock face radius (px)
-
-// ── Colours ───────────────────────────────────────────────────────────────────
-
-const C_CANVAS = '#0a0a0f';  // dark outer background
-const C_RIM    = '#111111';  // face border ring
-const C_FACE   = '#f5f0e8';  // warm off-white face
-const C_TICK   = '#111111';  // tick marks
-const C_HAND   = '#111111';  // hour hand + minute stem
-const C_DISC   = '#e30613';  // DB red — minute-hand lollipop disc
-
-// ── Geometry helpers ─────────────────────────────────────────────────────────
-// All angles: 0° = 12 o'clock, positive = clockwise (SVG convention).
-
-/**
- * Apply a clockwise rotation of `angleDeg` to a list of local [x, y] points,
- * then translate to absolute position (cx, cy).
- * Local y-axis: negative = toward 12 o'clock.
- */
-function rotateAndTranslate(points, angleDeg, cx, cy) {
-  const rad = (angleDeg * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  return points.map(([lx, ly]) => [
-    (cx + lx * cos - ly * sin).toFixed(2),
-    (cy + lx * sin + ly * cos).toFixed(2),
-  ]);
-}
-
-/**
- * SVG <polygon> for a rectangle in local coords:
- *   x ∈ [-w/2, w/2], y ∈ [yNear, yFar]  (negative y = toward 12)
- * Rotated by angleDeg and centred on (cx, cy).
- */
-function rotatedRect(cx, cy, angleDeg, w, yNear, yFar, fill) {
-  const corners = rotateAndTranslate(
-    [[-w / 2, yNear], [w / 2, yNear], [w / 2, yFar], [-w / 2, yFar]],
-    angleDeg, cx, cy
-  );
-  return `<polygon points="${corners.map(c => c.join(',')).join(' ')}" fill="${fill}"/>`;
-}
-
-/**
- * Absolute (x, y) of the point that lies `dist` px from (cx, cy)
- * in the direction of `angleDeg` (0 = up, 90 = right).
- */
-function radialPoint(cx, cy, angleDeg, dist) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: (cx + Math.sin(rad) * dist).toFixed(2),
-    y: (cy - Math.cos(rad) * dist).toFixed(2),
-  };
-}
 
 // ── SVG builder ───────────────────────────────────────────────────────────────
 
 /**
  * Returns SVG markup for the clock at the given Date.
  * Exported so test scripts can call it without sharp being installed.
+ *
+ * @param {Date} now
+ * @param {object} [config] — optional; `config.complications` toggles overlay slots
  */
-function buildClockSvg(now) {
+function buildClockSvg(now, config = {}) {
   const h12 = now.getHours() % 12;
   const min = now.getMinutes();
 
@@ -119,6 +72,10 @@ function buildClockSvg(now) {
   const discPt    = radialPoint(CX, CY, minuteAngle, DISC_DIST);
   const disc      = `<circle cx="${discPt.x}" cy="${discPt.y}" r="${DISC_R}" fill="${C_DISC}"/>`;
 
+  // ── Complications (corners + date) ─────────────────────────────────────────
+  // Rendered after the face background, before tick marks and hands.
+  const complicationsSvg = buildComplicationsSvg(now, config);
+
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
 
   <!-- Canvas background -->
@@ -127,6 +84,9 @@ function buildClockSvg(now) {
   <!-- Clock face: rim + off-white inner -->
   <circle cx="${CX}" cy="${CY}" r="${R}"     fill="${C_RIM}"/>
   <circle cx="${CX}" cy="${CY}" r="${R - 5}" fill="${C_FACE}"/>
+
+  <!-- Complications (corners + date) -->
+  ${complicationsSvg}
 
   <!-- Tick marks -->
   ${ticks.join('\n  ')}
@@ -147,12 +107,13 @@ function buildClockSvg(now) {
 </svg>`;
 }
 
-// ── Image generation (used by automate.js) ───────────────────────────────────
+// ── Image generation (used by automate.js via generate.js) ───────────────────
 
-async function generateImage() {
+async function generateImage(config) {
   const sharp = require('sharp');  // lazy: only loaded when actually generating
+  const resolved = config ?? loadConfig();
   const now = new Date();
-  const svg = buildClockSvg(now);
+  const svg = buildClockSvg(now, resolved);
 
   await sharp(Buffer.from(svg))
     .resize(W, H)
