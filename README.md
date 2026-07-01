@@ -31,10 +31,49 @@ Copy `config.example.json` to `config.json` and edit as needed:
 | `complications.slots` | stat key or `null` | Corner slots 1–4 (see below) |
 | `complications.dayOfWeek` | boolean | Short weekday above clock centre |
 | `complications.date` | boolean | Abbreviated date below clock centre |
+| `padding.top/right/bottom/left` | pixels | Inset drawable area on each edge (clock only) |
 
 `generate.js` reads `config.json` and dispatches to the selected generator. `automate.js` uses the same config for `intervalMs`.
 
-**Note:** the clock template is 640×512 (landscape); the stats template is 512×640 (portrait). Switching `generator` changes the dock orientation.
+**Note:** the clock template is **640×480**. Use `padding` (top/right/bottom/left, px) to inset the drawable area if the dock crops the image. Stats template is 512×640 (portrait).
+
+### Fonts
+
+Typography for **clock complications** (corner stats and date labels). Fonts are resolved at PNG rasterize time via the OS font stack (sharp uses system fonts).
+
+```json
+"fonts": {
+  "sans": "Segoe UI, Helvetica Neue, Arial, sans-serif",
+  "mono": "Consolas, Courier New, monospace",
+  "complication": null,
+  "weights": {
+    "normal": "400",
+    "semibold": "600",
+    "bold": "700"
+  },
+  "sizes": {
+    "complicationCorner": 40,
+    "complicationCornerLabel": 20,
+    "complicationDate": 28
+  }
+}
+```
+
+| Key | Used for |
+|-----|----------|
+| `fonts.sans` | Default family when no role-specific override is set |
+| `fonts.mono` | Reserved; not used by the clock template today |
+| `fonts.complication` | Family for all complication text; `null` inherits `sans` |
+| `fonts.weights.normal` | Available weight key (400) |
+| `fonts.weights.semibold` | Corner stat labels (`CPU`, `GPU`, …) and date slots |
+| `fonts.weights.bold` | Corner stat values (`42%`, `58°`, …) |
+| `fonts.sizes.complicationCorner` | Font size (px) for corner stat values |
+| `fonts.sizes.complicationCornerLabel` | Font size (px) for corner stat labels |
+| `fonts.sizes.complicationDate` | Font size (px) for day-of-week and date text |
+
+Corner label and value positions are computed from the configured sizes (12px gap between lines, 12px inset from the top of each corner slot). If label and value overlap, reduce the sizes or increase padding.
+
+The **stats** template (`"generator": "stats"`) uses hardcoded monospace styling and does not read `fonts` from config.
 
 ## Analog Clock
 

@@ -20,13 +20,12 @@ function config(overrides = {}) {
 }
 
 describe('buildComplicationsSvg', () => {
-  it('renders stat corners at expected positions for default slots', () => {
+  it('renders corner stat text centered in each slot region', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, config(), MOCK_STATS);
+    const tlCx = CORNER_SLOTS.cornerTopLeft.x + CORNER_SLOTS.cornerTopLeft.w / 2;
 
-    assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerTopLeft.x}" y="${CORNER_SLOTS.cornerTopLeft.y}" width="155" height="100"`));
-    assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerTopRight.x}" y="${CORNER_SLOTS.cornerTopRight.y}" width="155" height="100"`));
-    assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerBottomLeft.x}" y="${CORNER_SLOTS.cornerBottomLeft.y}" width="155" height="100"`));
-    assert.match(svg, new RegExp(`x="${CORNER_SLOTS.cornerBottomRight.x}" y="${CORNER_SLOTS.cornerBottomRight.y}" width="155" height="100"`));
+    assert.doesNotMatch(svg, /width="155" height="100"/);
+    assert.match(svg, new RegExp(`x="${tlCx}"[^>]*>CPU</`));
   });
 
   it('shows CPU load in slot 1 and RAM in slot 2', () => {
@@ -77,23 +76,25 @@ describe('buildComplicationsSvg', () => {
     assert.match(svg, />Jun 28</);
   });
 
-  it('uses visible label color on dark corner background', () => {
+  it('uses visible label color on clock face', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, config(), MOCK_STATS);
     assert.match(svg, /fill="#b0b0b8">CPU</);
     assert.doesNotMatch(svg, /fill="#111111">CPU</);
   });
 
-  it('uses font family from config.fonts', () => {
+  it('uses font family and size-aware layout from config.fonts', () => {
     const svg = buildComplicationsSvg(FIXED_DATE, {
       complications: { slots: { '1': 'cpu' }, dayOfWeek: false, date: false },
       fonts: {
         complication: 'Roboto, sans-serif',
         weights: { semibold: '500', bold: '800' },
-        sizes: { complicationCorner: 40, complicationCornerLabel: 20 },
+        sizes: { complicationCorner: 48, complicationCornerLabel: 28 },
       },
     }, MOCK_STATS);
 
     assert.match(svg, /font-family="Roboto, sans-serif"/);
+    assert.match(svg, /y="26"[^>]*font-size="28"[^>]*>CPU</);
+    assert.match(svg, /y="76"[^>]*font-size="48"[^>]*>42%</);
   });
 
   it('date slot y positions are half radius from center', () => {

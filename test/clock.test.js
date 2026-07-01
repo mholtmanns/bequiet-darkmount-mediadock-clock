@@ -11,8 +11,9 @@ const TIME_10_10 = new Date('2026-01-15T10:10:00');
 describe('buildClockSvg', () => {
   it('produces valid SVG with clock face dimensions', () => {
     const svg = buildClockSvg(TIME_10_10, {});
-    assert.match(svg, /^<svg width="640" height="512"/);
-    assert.match(svg, /viewBox="0 0 640 512"/);
+    assert.match(svg, /^<svg width="640" height="480"/);
+    assert.match(svg, /viewBox="0 0 640 480"/);
+    assert.match(svg, /cy="240" r="240"/);
   });
 
   it('includes tick marks and centre hub', () => {

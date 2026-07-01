@@ -2,15 +2,16 @@
 'use strict';
 
 // generate_clock.js — Deutsche Bahn-style analog clock face
-// 640×512 landscape PNG, updated every minute (no seconds hand).
-// Lazy-requires sharp so the module can be imported for testing without it.
+// 640×480 PNG; optional config.padding insets the drawable area on all four sides.
 
 const path = require('path');
 const { loadConfig } = require('./lib/config');
 const {
-  W, H, CX, CY, R,
+  W, H,
+  resolveLayout,
   C_CANVAS, C_RIM, C_FACE, C_TICK, C_HAND, C_DISC,
 } = require('./lib/layout');
+const { writeClockPng } = require('./lib/clockOutput');
 const { rotatedRect, radialPoint } = require('./lib/geometry');
 const { buildComplicationsSvg } = require('./lib/complications');
 const { getStats, needsStats } = require('./lib/stats');
@@ -31,18 +32,19 @@ const CURRENT_IMAGE = path.join(__dirname, 'current.png');
  * @param {object} [stats] — system stats for corner slot values
  */
 function buildClockSvg(now, config = {}, stats = null) {
+  const layout = resolveLayout(config.padding);
+  const { CX, CY, R, scale } = layout;
+
   const h12 = now.getHours() % 12;
   const min = now.getMinutes();
 
-  // Smooth hour hand: advances 0.5° per minute within the hour
   const hourAngle   = (h12 + min / 60) * 30;
   const minuteAngle = min * 6;
 
-  // ── Tick marks ──────────────────────────────────────────────────────────────
-  const TICK_OUTER = R - 6;  // outer edge of ticks (just inside the rim)
+  const TICK_OUTER = R - 6 * scale;
 
-  const HOUR_TICK = { len: 28, w: 14 };
-  const MIN_TICK  = { len: 11, w:  5 };
+  const HOUR_TICK = { len: 28 * scale, w: 14 * scale };
+  const MIN_TICK  = { len: 11 * scale, w:  5 * scale };
 
   const ticks = [];
   for (let i = 0; i < 60; i++) {
@@ -52,21 +54,19 @@ function buildClockSvg(now, config = {}, stats = null) {
     );
   }
 
-  // ── Hour hand ────────────────────────────────────────────────────────────────
-  const HOUR_TIP  = 136;   // distance tip → centre (px)
-  const HOUR_TAIL = 28;    // distance centre → tail (px)
-  const HOUR_W    = 16;    // hand width (px)
+  const HOUR_TIP  = 136 * scale;
+  const HOUR_TAIL = 28 * scale;
+  const HOUR_W    = 16 * scale;
 
   const hourHand  = rotatedRect(CX, CY, hourAngle, HOUR_W, -HOUR_TIP, HOUR_TAIL, C_HAND);
   const hourTipPt = radialPoint(CX, CY, hourAngle, HOUR_TIP);
   const hourCap   = `<circle cx="${hourTipPt.x}" cy="${hourTipPt.y}" r="${HOUR_W / 2}" fill="${C_HAND}"/>`;
 
-  // ── Minute hand ──────────────────────────────────────────────────────────────
-  const MIN_TIP   = 198;        // stem tip → centre (px)
-  const MIN_TAIL  = 32;         // centre → tail (px)
-  const MIN_W     = 7;          // stem width (px)
-  const DISC_R    = 17;         // radius of the red disc (px)
-  const DISC_DIST = R * 0.765;  // disc centre → clock centre (≈ 171 px)
+  const MIN_TIP   = 198 * scale;
+  const MIN_TAIL  = 32 * scale;
+  const MIN_W     = 7 * scale;
+  const DISC_R    = 17 * scale;
+  const DISC_DIST = R * 0.765;
 
   const minStem   = rotatedRect(CX, CY, minuteAngle, MIN_W, -MIN_TIP, MIN_TAIL, C_HAND);
   const minTipPt  = radialPoint(CX, CY, minuteAngle, MIN_TIP);
@@ -74,9 +74,7 @@ function buildClockSvg(now, config = {}, stats = null) {
   const discPt    = radialPoint(CX, CY, minuteAngle, DISC_DIST);
   const disc      = `<circle cx="${discPt.x}" cy="${discPt.y}" r="${DISC_R}" fill="${C_DISC}"/>`;
 
-  // ── Complications (corners + date) ─────────────────────────────────────────
-  // Rendered after the face background, before tick marks and hands.
-  const complicationsSvg = buildComplicationsSvg(now, config, stats);
+  const complicationsSvg = buildComplicationsSvg(now, config, stats, layout);
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
 
@@ -85,7 +83,7 @@ function buildClockSvg(now, config = {}, stats = null) {
 
   <!-- Clock face: rim + off-white inner -->
   <circle cx="${CX}" cy="${CY}" r="${R}"     fill="${C_RIM}"/>
-  <circle cx="${CX}" cy="${CY}" r="${R - 5}" fill="${C_FACE}"/>
+  <circle cx="${CX}" cy="${CY}" r="${R - 5 * scale}" fill="${C_FACE}"/>
 
   <!-- Complications (corners + date) -->
   ${complicationsSvg}
@@ -103,8 +101,8 @@ function buildClockSvg(now, config = {}, stats = null) {
   ${disc}
 
   <!-- Centre hub -->
-  <circle cx="${CX}" cy="${CY}" r="13" fill="${C_HAND}"/>
-  <circle cx="${CX}" cy="${CY}" r="5"  fill="${C_FACE}"/>
+  <circle cx="${CX}" cy="${CY}" r="${13 * scale}" fill="${C_HAND}"/>
+  <circle cx="${CX}" cy="${CY}" r="${5 * scale}"  fill="${C_FACE}"/>
 
 </svg>`;
 }
@@ -112,16 +110,12 @@ function buildClockSvg(now, config = {}, stats = null) {
 // ── Image generation (used by automate.js via generate.js) ───────────────────
 
 async function generateImage(config) {
-  const sharp = require('sharp');  // lazy: only loaded when actually generating
   const resolved = config ?? loadConfig();
   const now = new Date();
   const stats = needsStats(resolved) ? await getStats() : null;
   const svg = buildClockSvg(now, resolved, stats);
 
-  await sharp(Buffer.from(svg))
-    .resize(W, H)
-    .png()
-    .toFile(CURRENT_IMAGE);
+  await writeClockPng(svg, CURRENT_IMAGE);
 
   if (stats) {
     const gpuInfo = stats.gpuLoadPct != null

@@ -15,6 +15,7 @@ describe('loadConfig', () => {
     assert.equal(config.intervalMs, DEFAULTS.intervalMs);
     assert.deepEqual(config.complications, DEFAULTS.complications);
     assert.deepEqual(config.fonts, DEFAULTS.fonts);
+    assert.deepEqual(config.padding, DEFAULTS.padding);
   });
 
   it('merges file values over defaults', () => {
@@ -46,6 +47,20 @@ describe('loadConfig', () => {
     const config = loadConfig(configPath);
     assert.equal(config.complications.slots['4'], 'vram');
     assert.equal(config.complications.slots['1'], DEFAULTS.complications.slots['1']);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it('deep-merges padding', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-test-'));
+    const configPath = path.join(tmpDir, 'config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      padding: { bottom: 20 },
+    }));
+
+    const config = loadConfig(configPath);
+    assert.equal(config.padding.bottom, 20);
+    assert.equal(config.padding.top, DEFAULTS.padding.top);
 
     fs.rmSync(tmpDir, { recursive: true });
   });

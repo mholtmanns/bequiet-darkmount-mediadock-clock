@@ -15,6 +15,7 @@ const fs   = require('fs');
 const path = require('path');
 const { loadConfig } = require('./lib/config');
 const { buildClockSvg } = require('./generate_clock');
+const { writeClockPng } = require('./lib/clockOutput');
 const { buildSvg } = require('./generate_stats');
 const { MOCK_STATS } = require('./lib/stats');
 
@@ -79,7 +80,7 @@ async function svgToPng(svg, outPath, width, height) {
 
 async function previewClock(config, now, outPath) {
   const svg = buildClockSvg(now, config, MOCK_STATS);
-  await svgToPng(svg, outPath, 640, 512);
+  await writeClockPng(svg, outPath);
 }
 
 async function previewStats(now, outPath) {
