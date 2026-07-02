@@ -34,7 +34,12 @@ Copy `config.example.json` to `config.json` and edit as needed:
 | `padding.top/right/bottom/left` | pixels | Inset drawable area on each edge (clock only) |
 | `hwinfo.cpuTempIndex` | number or `null` | HWiNFO Gadget sensor index for CPU temp (Windows) |
 | `hwinfo.cpuTempLabel` | string | Label fallback when index unset (default `CPU Package`) |
+| `hwinfo.gpuTempIndex` | number or `null` | HWiNFO sensor index for GPU temperature |
+| `hwinfo.gpuLoadIndex` | number or `null` | HWiNFO sensor index for GPU core load % |
+| `hwinfo.gpuMemIndex` | number or `null` | HWiNFO sensor index for GPU memory usage % |
+| `hwinfo.gpuTempLabel` / `gpuLoadLabel` / `gpuMemLabel` | string | Label fallbacks for GPU sensors |
 | `hwinfo.hive` | `"auto"` \| `"HKCU"` \| `"HKLM"` | Registry hive for HWiNFO Gadget values |
+| `nvidiaSmi.enabled` | boolean | Use `nvidia-smi` as fallback when HWiNFO unavailable (default `true`) |
 
 `generate.js` reads `config.json` and dispatches to the selected generator. `automate.js` uses the same config for `intervalMs`.
 
@@ -113,40 +118,64 @@ Temperatures use the same source name as load (e.g. `GPU` for both `gpu` and `gp
 - **Above centre** (half the face radius): short day of week, e.g. `Thu`
 - **Below centre** (half the face radius): abbreviated date, e.g. `Jun 28`
 
-Corner stats are collected live on each refresh (same sources as the stats template). Recommended `intervalMs`: **20000** when using live stats. GPU temperature uses `nvidia-smi`; GPU load uses Windows performance counters (matches Task Manager).
+Corner stats are collected live on each refresh (same sources as the stats template). Recommended `intervalMs`: **20000** when using live stats.
 
-### CPU temperature (HWiNFO)
+### Sensor stats (HWiNFO)
 
-On Windows, CPU temperature for the `cpuTemp` slot is read from **HWiNFO Gadget** registry values when available. This gives accurate die/package temps on hardware where WMI (`systeminformation`) returns nothing.
+On Windows, CPU and GPU sensor values for complication slots are read from **HWiNFO Gadget** registry values when available. CPU/RAM **load** still uses `systeminformation`.
+
+**GPU resolution order** (per metric):
+
+| Metric | Primary | Fallback 1 | Fallback 2 |
+|--------|---------|------------|------------|
+| GPU temp (`gpuTemp`) | HWiNFO | `nvidia-smi` (if enabled) | `—` |
+| GPU load (`gpu`) | HWiNFO | Windows performance counters | `nvidia-smi` (if enabled) |
+| VRAM (`vram`) | HWiNFO | `nvidia-smi` (if enabled) | `—` |
+
+Set `"nvidiaSmi": { "enabled": false }` to rely on HWiNFO only (plus Windows counters for GPU load fallback).
 
 **Setup:**
 
 1. Run HWiNFO in sensor mode (tray icon → Sensors).
 2. **Configure Sensors** → **HWiNFO Gadget** tab → enable **Enable reporting to Gadget**.
-3. Find your CPU temperature sensor and tick **Report value in Gadget** for it.
-4. List exported sensors and copy the index:
+3. Find your CPU/GPU sensors and tick **Report value in Gadget** for each.
+4. List exported sensors and copy the indices:
 
 ```
 npm run hwinfo:sensors
 ```
 
-5. Optional: set `hwinfo.cpuTempIndex` in `config.json`. If omitted, the script matches `hwinfo.cpuTempLabel` (default `"CPU Package"`).
+5. Set `hwinfo.*Index` in `config.json`, or rely on label matching (see defaults below).
 
 ```json
 "hwinfo": {
   "cpuTempIndex": null,
   "cpuTempLabel": "CPU Package",
+  "gpuTempIndex": null,
+  "gpuTempLabel": "GPU Temperature",
+  "gpuLoadIndex": null,
+  "gpuLoadLabel": "GPU Core Load",
+  "gpuMemIndex": null,
+  "gpuMemLabel": "GPU Memory Usage",
   "hive": "auto"
+},
+"nvidiaSmi": {
+  "enabled": true
 }
 ```
 
 | Key | Description |
 |-----|-------------|
-| `cpuTempIndex` | HWiNFO Gadget sensor index (`ValueRawN`). Most reliable once stable. |
-| `cpuTempLabel` | Fallback label match when index is null or invalid. |
+| `cpuTempIndex` / `cpuTempLabel` | CPU temperature sensor |
+| `gpuTempIndex` / `gpuTempLabel` | GPU temperature (default label `GPU Temperature`) |
+| `gpuLoadIndex` / `gpuLoadLabel` | GPU core load % (default `GPU Core Load`) |
+| `gpuMemIndex` / `gpuMemLabel` | GPU memory usage % (default `GPU Memory Usage`) |
 | `hive` | `"auto"` (try HKCU then HKLM), `"HKCU"`, or `"HKLM"`. Use `"HKLM"` if HWiNFO runs elevated. |
+| `nvidiaSmi.enabled` | Optional `nvidia-smi` fallback for GPU temp/VRAM (and GPU load if HWiNFO + Windows counters fail) |
 
-HWiNFO and this script should run under the **same Windows user**. If HWiNFO is not running or no sensor is exported, CPU temp falls back to WMI and may show `—`.
+HWiNFO and this script should run under the **same Windows user**. If HWiNFO is not running or a sensor is not exported, values fall back as described above or show `—`.
+
+CPU temperature additionally falls back to WMI via `systeminformation` when HWiNFO has no reading.
 
 **Note:** Gadget sensor indices can change when you add or remove exported sensors — set the index once your gadget list is stable, and keep `cpuTempLabel` as a fallback.
 
@@ -202,10 +231,10 @@ A Node.js script generates a stats image as a PNG, then uses browser automation 
 
 ## Requirements
 
-- Windows (GPU stats use PowerShell performance counters)
+- Windows (HWiNFO Gadget registry for CPU/GPU sensor stats; optional `nvidia-smi` fallback)
 - Node.js 18+
 - A be quiet! Dark Mount keyboard
-- NVIDIA GPU recommended — GPU %, VRAM %, and temperature are read via `nvidia-smi`. The display degrades gracefully if it isn't found (CPU and RAM still show).
+- HWiNFO with Gadget reporting enabled for the sensors you use. Stats degrade gracefully when unavailable (CPU and RAM still show).
 
 ## Installation
 

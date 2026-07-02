@@ -38,8 +38,13 @@ function main() {
   }
 
   console.log('');
-  console.log('Set hwinfo.cpuTempIndex in config.json to the Index of your CPU temp sensor.');
-  console.log('Or rely on hwinfo.cpuTempLabel (default: "CPU Package") for automatic matching.');
+  console.log('Config keys (set Index or rely on default Label):');
+  console.log('  CPU temp:  hwinfo.cpuTempIndex  /  hwinfo.cpuTempLabel  (default: CPU Package)');
+  console.log('  GPU temp:  hwinfo.gpuTempIndex  /  hwinfo.gpuTempLabel  (default: GPU Temperature)');
+  console.log('  GPU load:  hwinfo.gpuLoadIndex  /  hwinfo.gpuLoadLabel  (default: GPU Core Load)');
+  console.log('  GPU VRAM:  hwinfo.gpuMemIndex   /  hwinfo.gpuMemLabel   (default: GPU Memory Usage)');
+  console.log('');
+  console.log('Set nvidiaSmi.enabled to false in config.json to skip nvidia-smi fallback.');
 }
 
 main();

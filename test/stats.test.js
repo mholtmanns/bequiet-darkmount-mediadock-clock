@@ -6,11 +6,14 @@ const {
   MOCK_STATS,
   parseCpuTemp,
   resolveCpuTemp,
+  resolveGpuStats,
   needsCpuTemp,
+  needsGpuStats,
   formatStatForSlot,
   needsStats,
   isStatTypeKey,
 } = require('../lib/stats');
+const { parseVsbToSensors } = require('../lib/hwinfoRegistry');
 
 describe('parseCpuTemp', () => {
   it('returns max of valid readings', () => {
@@ -54,6 +57,74 @@ describe('resolveCpuTemp', () => {
       }
     );
     assert.equal(result, 60);
+  });
+
+  it('prefers HWiNFO value from snapshot', () => {
+    const snapshot = {
+      hive: 'HKCU',
+      props: { ValueRaw0: '72', Label0: 'CPU Package' },
+      sensors: [{ index: 0, label: 'CPU Package', sensor: 'CPU', valueRaw: '72' }],
+    };
+    const result = resolveCpuTemp(
+      { main: 55, max: 60 },
+      { complications: { slots: { '4': 'cpuTemp' } }, hwinfo: { cpuTempIndex: 0 } },
+      snapshot
+    );
+    assert.equal(result, 72);
+  });
+});
+
+describe('needsGpuStats', () => {
+  it('is true when a slot uses gpu, vram, or gpuTemp', () => {
+    assert.equal(needsGpuStats({ complications: { slots: { '3': 'gpu' } } }), true);
+    assert.equal(needsGpuStats({ complications: { slots: { '2': 'vram' } } }), true);
+    assert.equal(needsGpuStats({ complications: { slots: { '1': 'gpuTemp' } } }), true);
+  });
+
+  it('is true for stats generator', () => {
+    assert.equal(needsGpuStats({ generator: 'stats', complications: { slots: {} } }), true);
+  });
+
+  it('is false when no GPU slots and clock generator', () => {
+    assert.equal(needsGpuStats({ complications: { slots: { '1': 'cpu' } } }), false);
+  });
+});
+
+describe('resolveGpuStats', () => {
+  const gpuSnapshot = {
+    hive: 'HKCU',
+    props: {
+      ValueRaw1: '58',
+      ValueRaw3: '23',
+      ValueRaw4: '45',
+      Label1: 'GPU Temperature',
+      Label3: 'GPU Core Load',
+      Label4: 'GPU Memory Usage',
+    },
+    sensors: parseVsbToSensors({
+      ValueRaw1: '58',
+      Label1: 'GPU Temperature',
+      ValueRaw3: '23',
+      Label3: 'GPU Core Load',
+      ValueRaw4: '45',
+      Label4: 'GPU Memory Usage',
+    }),
+  };
+
+  it('returns nulls when no GPU stats needed', () => {
+    assert.deepEqual(
+      resolveGpuStats({ complications: { slots: { '1': 'cpu' } } }, gpuSnapshot),
+      { gpuTemp: null, gpuLoadPct: null, gpuMemPct: null }
+    );
+  });
+
+  it('prefers HWiNFO values from snapshot when nvidia-smi disabled', () => {
+    const result = resolveGpuStats({
+      complications: { slots: { '3': 'gpu', '4': 'gpuTemp' } },
+      nvidiaSmi: { enabled: false },
+      hwinfo: { gpuTempIndex: 1, gpuLoadIndex: 3, gpuMemIndex: 4 },
+    }, gpuSnapshot);
+    assert.deepEqual(result, { gpuTemp: 58, gpuLoadPct: 23, gpuMemPct: 45 });
   });
 });
 

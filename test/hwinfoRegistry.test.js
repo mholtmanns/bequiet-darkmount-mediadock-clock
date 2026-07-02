@@ -4,8 +4,11 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   parseHwinfoTemp,
+  parseHwinfoPercent,
   parseVsbToSensors,
   findSensorByLabel,
+  resolveSensorValue,
+  readHwinfoGpuStats,
 } = require('../lib/hwinfoRegistry');
 
 describe('parseHwinfoTemp', () => {
@@ -68,5 +71,74 @@ describe('findSensorByLabel', () => {
   it('returns null when no match', () => {
     assert.equal(findSensorByLabel(sensors, 'GPU Temperature'), null);
     assert.equal(findSensorByLabel([], 'CPU Package'), null);
+  });
+});
+
+describe('parseHwinfoPercent', () => {
+  it('rounds and clamps to 0-100', () => {
+    assert.equal(parseHwinfoPercent(23.6), 24);
+    assert.equal(parseHwinfoPercent('100.5'), 100);
+    assert.equal(parseHwinfoPercent(0), 0);
+  });
+
+  it('returns null for invalid readings', () => {
+    assert.equal(parseHwinfoPercent(null), null);
+    assert.equal(parseHwinfoPercent(-1), null);
+    assert.equal(parseHwinfoPercent('n/a'), null);
+  });
+});
+
+describe('resolveSensorValue', () => {
+  const props = { ValueRaw2: '37.2', Label2: 'GPU Temperature' };
+  const sensors = [{ index: 2, label: 'GPU Temperature', sensor: 'GPU', valueRaw: '37.2' }];
+
+  it('reads by index first', () => {
+    assert.equal(
+      resolveSensorValue(props, sensors, { index: 2, label: 'Missing' }, parseHwinfoTemp),
+      37
+    );
+  });
+
+  it('falls back to label', () => {
+    assert.equal(
+      resolveSensorValue(props, sensors, { index: null, label: 'GPU Temperature' }, parseHwinfoTemp),
+      37
+    );
+  });
+});
+
+describe('readHwinfoGpuStats', () => {
+  const snapshot = {
+    hive: 'HKCU',
+    props: {
+      ValueRaw1: '58.2',
+      ValueRaw3: '23.4',
+      ValueRaw4: '45.1',
+      Label1: 'GPU Temperature',
+      Label3: 'GPU Core Load',
+      Label4: 'GPU Memory Usage',
+    },
+    sensors: parseVsbToSensors({
+      ValueRaw1: '58.2',
+      Label1: 'GPU Temperature',
+      ValueRaw3: '23.4',
+      Label3: 'GPU Core Load',
+      ValueRaw4: '45.1',
+      Label4: 'GPU Memory Usage',
+    }),
+  };
+
+  it('reads GPU temp, load, and memory from snapshot by index', () => {
+    const stats = readHwinfoGpuStats({
+      gpuTempIndex: 1,
+      gpuLoadIndex: 3,
+      gpuMemIndex: 4,
+    }, snapshot);
+    assert.deepEqual(stats, { gpuTemp: 58, gpuLoadPct: 23, gpuMemPct: 45 });
+  });
+
+  it('reads GPU stats from snapshot by label', () => {
+    const stats = readHwinfoGpuStats({}, snapshot);
+    assert.deepEqual(stats, { gpuTemp: 58, gpuLoadPct: 23, gpuMemPct: 45 });
   });
 });

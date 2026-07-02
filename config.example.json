@@ -35,6 +35,15 @@
   "hwinfo": {
     "cpuTempIndex": null,
     "cpuTempLabel": "CPU Package",
+    "gpuTempIndex": null,
+    "gpuTempLabel": "GPU Temperature",
+    "gpuLoadIndex": null,
+    "gpuLoadLabel": "GPU Core Load",
+    "gpuMemIndex": null,
+    "gpuMemLabel": "GPU Memory Usage",
     "hive": "auto"
+  },
+  "nvidiaSmi": {
+    "enabled": true
   }
 }
